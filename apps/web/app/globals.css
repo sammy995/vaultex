@@ -1,0 +1,372 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+/* ============================================================
+   VAULTEX — "The Ledger" design system
+   Light editorial / institutional. Warm paper, ink, vault-green,
+   a vermilion risk-signal. Broadsheet typography + redaction motif.
+   ============================================================ */
+
+:root {
+  /* Paper & ink */
+  --paper: #f1ece1;
+  --paper-card: #faf7ef;
+  --paper-deep: #e8e1d2;
+  --ink: #17150f;
+  --ink-soft: #4d4a3f;
+  --ink-faint: #655f50;
+
+  /* Accents */
+  --vault: #0d5a40;
+  --vault-deep: #0a4631;
+  --vault-soft: rgba(13, 90, 64, 0.08);
+  --signal: #b23a20;
+  --signal-soft: rgba(178, 58, 32, 0.08);
+  --gold: #6f5519;
+
+  /* Lines */
+  --rule: rgba(23, 21, 15, 0.14);
+  --rule-strong: rgba(23, 21, 15, 0.32);
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Back-compat aliases (older inline styles referenced these) */
+  --bg-base: var(--paper);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-muted: var(--ink-faint);
+  --color-primary: var(--vault);
+  --font-ui: var(--font-sans);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  margin: 0;
+  padding: 0;
+}
+
+/* Subtle paper grain for depth */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background-image: radial-gradient(rgba(23, 21, 15, 0.022) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+::selection { background: var(--vault); color: var(--paper); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper-deep); }
+::-webkit-scrollbar-thumb { background: var(--rule-strong); border: 3px solid var(--paper-deep); border-radius: 0; }
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding-inline: clamp(20px, 5vw, 64px); }
+.wrap-narrow { width: 100%; max-width: 820px; margin: 0 auto; padding-inline: clamp(20px, 5vw, 40px); }
+
+/* ── Typography ─────────────────────────────────────────────── */
+.display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-optical-sizing: auto;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.display-xl { font-size: clamp(2.9rem, 7vw, 5.6rem); }
+.display-lg { font-size: clamp(2.2rem, 4.6vw, 3.6rem); }
+.display-md { font-size: clamp(1.6rem, 3vw, 2.3rem); }
+.serif-italic { font-family: var(--font-display); font-style: italic; font-weight: 400; }
+
+.lede {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.eyebrow-vault { color: var(--vault); }
+.eyebrow-signal { color: var(--signal); }
+
+.section-no {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.drop-cap::first-letter {
+  font-family: var(--font-display);
+  float: left;
+  font-size: 3.6em;
+  line-height: 0.74;
+  font-weight: 600;
+  padding: 0.06em 0.1em 0 0;
+  color: var(--vault);
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* ── Rules / hairlines ──────────────────────────────────────── */
+.rule { height: 1px; background: var(--rule); border: 0; }
+.rule-strong { height: 1px; background: var(--rule-strong); border: 0; }
+.rule-v { width: 1px; background: var(--rule); align-self: stretch; }
+
+/* ── Panels / cards (sharp, ruled — ledger feel) ────────────── */
+.panel {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.panel-ink {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 2px;
+}
+
+/* ── The redaction motif ────────────────────────────────────── */
+/* Raw PII shown as a redaction bar that resolves to a token. */
+.redact {
+  background: var(--ink);
+  color: var(--ink);
+  border-radius: 1px;
+  padding: 0 0.34em;
+  transition: color 220ms ease, background 220ms ease;
+  user-select: none;
+}
+.redact.is-revealed { background: var(--signal-soft); color: var(--signal); }
+
+.tok {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--vault);
+  background: var(--vault-soft);
+  border: 1px solid rgba(13, 90, 64, 0.28);
+  border-radius: 2px;
+  padding: 0 0.32em;
+  white-space: nowrap;
+}
+
+/* ── Chips ──────────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule-strong);
+  border-radius: 100px;
+  padding: 5px 12px;
+  background: var(--paper-card);
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+  padding: 12px 22px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.btn-ink { background: var(--ink); color: var(--paper); }
+.btn-ink:hover { background: var(--vault-deep); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(13, 90, 64, 0.18); }
+.btn-vault { background: var(--vault); color: var(--paper); }
+.btn-vault:hover { background: var(--vault-deep); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(13, 90, 64, 0.2); }
+.btn-line { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
+.btn-line:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* back-compat for older pages still using .btn-primary */
+.btn-primary { background: var(--ink); color: var(--paper); font-family: var(--font-sans); font-weight: 600; border: none; border-radius: 3px; padding: 12px 22px; cursor: pointer; transition: all 180ms ease; }
+.btn-primary:hover { background: var(--vault-deep); transform: translateY(-2px); }
+
+/* ── Links ──────────────────────────────────────────────────── */
+.link-underline {
+  color: var(--vault);
+  text-decoration: none;
+  background-image: linear-gradient(var(--vault), var(--vault));
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 220ms ease;
+  font-weight: 600;
+}
+.link-underline:hover { background-size: 100% 1px; }
+
+/* ── Ledger background (ruled paper) ────────────────────────── */
+.ledger-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 35px,
+    var(--rule) 35px,
+    var(--rule) 36px
+  );
+}
+
+/* ── Motion ─────────────────────────────────────────────────── */
+[data-reveal] { opacity: 0; transform: translateY(14px); }
+[data-reveal].is-in { opacity: 1; transform: none; transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.animate-fade-in { animation: fade-in-up 0.5s ease forwards; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-soft { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  [data-reveal] { opacity: 1; transform: none; }
+}
+
+/* ── Responsive helpers ─────────────────────────────────────── */
+.footer-grid { }
+@media (max-width: 900px) {
+  .footer-grid { grid-template-columns: 1fr 1fr !important; }
+  .footer-grid > div:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 540px) {
+  .footer-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Generic editorial split that stacks on small screens */
+.split-2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 72px); }
+@media (max-width: 880px) { .split-2 { grid-template-columns: 1fr; } }
+
+.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 880px) { .cols-3 { grid-template-columns: 1fr; } }
+
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 720px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ============================================================
+   Back-compat layer — remaps the OLD dark design tokens used by
+   app/console pages and components (chat, admin, setup, panels)
+   onto the light "Ledger" palette so they render coherently
+   without rewriting every component.
+   ============================================================ */
+:root {
+  --bg-surface: rgba(23, 21, 15, 0.035);
+  --bg-surface-hover: rgba(23, 21, 15, 0.07);
+  --bg-glass: var(--paper-card);
+
+  --color-primary-glow: rgba(13, 90, 64, 0.16);
+  --color-primary-dim: var(--vault-soft);
+
+  --color-safe: var(--vault);
+  --color-safe-glow: rgba(13, 90, 64, 0.16);
+  --color-safe-dim: var(--vault-soft);
+
+  --color-danger: var(--signal);
+  --color-danger-glow: rgba(178, 58, 32, 0.16);
+  --color-danger-dim: var(--signal-soft);
+
+  --color-warn: var(--gold);
+  --color-warn-dim: rgba(138, 106, 34, 0.12);
+
+  --border-subtle: var(--rule);
+  --border-primary: rgba(13, 90, 64, 0.3);
+  --border-safe: rgba(13, 90, 64, 0.3);
+
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+}
+
+.glass-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
+.token-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--vault);
+  background: var(--vault-soft);
+  border: 1px solid rgba(13, 90, 64, 0.28);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.pii-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--signal);
+  background: var(--signal-soft);
+  border: 1px solid rgba(178, 58, 32, 0.28);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+.btn-ghost:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.glow-divider { height: 1px; background: var(--rule); }
+.typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vault); display: inline-block; animation: pulse-soft 1.3s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.18s; }
+.typing-dot:nth-child(3) { animation-delay: 0.36s; }
+
+/* Responsive: compliance row stacks on small screens */
+@media (max-width: 680px) {
+  .compliance-row { grid-template-columns: 1fr !important; gap: 8px !important; }
+}
+
+/* Position content above the grain layer */
+nav, footer, main, section, header { position: relative; z-index: 1; }

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /setup/
+Disallow: /login/
+Disallow: /register/
+Disallow: /dashboard/
+
+Sitemap: https://vaultex.space/sitemap.xml

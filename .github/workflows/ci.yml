@@ -65,3 +65,34 @@ jobs:
         run: npm ci
       - working-directory: apps/web
         run: npm run build
+
+  security:
+    name: Secret + dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the secret scan
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Dependency audits surface advisories but don't block the build yet
+      # (a transitive high with no fix shouldn't wedge merges). Triage findings,
+      # then drop continue-on-error to make highs blocking.
+      - name: npm audit (web, high+)
+        working-directory: apps/web
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit (gateway)
+        working-directory: apps/gateway
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt

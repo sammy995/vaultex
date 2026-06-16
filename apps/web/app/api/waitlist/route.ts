@@ -1,5 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Best-effort per-IP rate limit. In-memory = per-instance only; for durable,
+// cross-instance limiting back this with Upstash Redis or a Vercel WAF rate-limit
+// rule. Still stops naive spam against the public waitlist + Resend cost abuse.
+const RATE_LIMIT = 5; // requests
+const RATE_WINDOW_MS = 10 * 60 * 1000; // per 10 minutes
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimited(ip: string): { limited: boolean; retryAfter: number } {
+  const now = Date.now();
+  const rec = hits.get(ip);
+  if (!rec || now > rec.resetAt) {
+    hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return { limited: false, retryAfter: 0 };
+  }
+  rec.count += 1;
+  if (rec.count > RATE_LIMIT) {
+    return { limited: true, retryAfter: Math.ceil((rec.resetAt - now) / 1000) };
+  }
+  return { limited: false, retryAfter: 0 };
+}
+
+function clientIp(req: NextRequest): string {
+  const xff = req.headers.get("x-forwarded-for");
+  return (xff ? xff.split(",")[0] : "").trim() || "unknown";
+}
+
 interface WaitlistEntry {
   email: string;
   company: string;
@@ -67,6 +93,14 @@ async function sendEmailNotification(entry: WaitlistEntry): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
+  const { limited, retryAfter } = rateLimited(clientIp(req));
+  if (limited) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
+  }
+
   let body: { email?: string; company?: string; role?: string };
   try {
     body = await req.json();

@@ -536,9 +536,10 @@ async def chat_completions(
             all_entities.extend([e.to_dict() for e in entities])
     except Exception as exc:
         log.error("tokenization_failed", error=str(exc), session_id=x_session_id)
+        # Generic message — internal detail is logged server-side, not returned.
         raise HTTPException(
             422,
-            f"PII tokenization failed — request blocked for safety. Detail: {exc}",
+            "PII tokenization failed — request blocked for safety.",
         )
 
     if all_entities:
@@ -570,7 +571,7 @@ async def chat_completions(
             session_id=x_session_id,
             provider=config["provider"],
         )
-        raise HTTPException(502, f"LLM provider error: {exc}")
+        raise HTTPException(502, "Upstream LLM provider error.")
 
     # 5. De-tokenize response according to caller's role
     raw_llm_response = llm_response

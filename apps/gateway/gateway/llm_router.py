@@ -1,7 +1,10 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 import httpx
 import structlog
+
+from gateway.config import settings
+from gateway.ssrf import guard_and_pin
 
 log = structlog.get_logger()
 
@@ -16,6 +19,20 @@ def _resolve_ollama_url(url: str) -> str:
         url.replace("//localhost:", "//host.docker.internal:")
            .replace("//127.0.0.1:", "//host.docker.internal:")
     )
+
+
+def _pin_ollama_target(url: str) -> Tuple[str, dict]:
+    """Apply the SSRF policy and pin the validated IP at connect time.
+
+    Returns ``(pinned_url, headers)`` where the URL host is the literal checked
+    IP (no DNS-rebinding window) and headers carry the original Host. Raises
+    SsrfBlocked on a disallowed target.
+    """
+    allowlist = [h.strip() for h in settings.ollama_url_allowlist.split(",") if h.strip()]
+    in_production = settings.environment.strip().lower() in ("production", "prod")
+    allow_private = (not in_production) or bool(allowlist)
+    pinned, host_header = guard_and_pin(url, allow_private=allow_private, allowlist=allowlist)
+    return pinned, {"Host": host_header}
 
 
 ANALYST_SYSTEM_PROMPT = """You are a quantitative banking risk analyst with expertise in credit analytics, loan portfolio management, and regulatory compliance (GLBA, GDPR, CCPA).
@@ -111,10 +128,12 @@ async def _call_openai(model: str, messages: List[Dict], api_key: str) -> str:
 async def _call_ollama(model: str, messages: List[Dict], ollama_url: str) -> str:
     """Uses Ollama's native /api/chat endpoint (supports all models)."""
     url = _resolve_ollama_url(ollama_url).rstrip("/") + "/api/chat"
+    pinned, headers = _pin_ollama_target(url)
     async with httpx.AsyncClient(timeout=300) as client:
         resp = await client.post(
-            url,
+            pinned,
             json={"model": model, "messages": messages, "stream": False},
+            headers=headers,
         )
         resp.raise_for_status()
         return resp.json()["message"]["content"]
@@ -122,7 +141,8 @@ async def _call_ollama(model: str, messages: List[Dict], ollama_url: str) -> str
 
 async def list_ollama_models(ollama_url: str) -> List[Dict]:
     url = _resolve_ollama_url(ollama_url).rstrip("/") + "/api/tags"
+    pinned, headers = _pin_ollama_target(url)
     async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(url)
+        resp = await client.get(pinned, headers=headers)
         resp.raise_for_status()
         return resp.json().get("models", [])

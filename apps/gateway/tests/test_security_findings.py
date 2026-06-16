@@ -17,7 +17,7 @@ import uuid
 import pytest
 
 from gateway.audit import AuditLogger, EventType
-from gateway.ssrf import SsrfBlocked, validate_ollama_url
+from gateway.ssrf import SsrfBlocked, guard_and_pin, validate_ollama_url
 from tests.conftest import FakeAsyncRedis
 
 
@@ -105,6 +105,23 @@ def test_ssrf_guard_enforces_allowlist():
             allow_private=True,
             allowlist=["ollama.internal"],
         )
+
+
+def test_guard_and_pin_returns_ip_literal_and_host_header():
+    # Pinning closes the DNS-rebinding window: the returned URL host is the
+    # validated literal IP, and the original host travels in the Host header.
+    pinned, host_header = guard_and_pin("http://localhost:11434/api/tags", allow_private=True)
+    host = pinned.split("//", 1)[1].split("/", 1)[0]
+    # Strip port; accept IPv4 (127.0.0.1) or bracketed IPv6 ([::1]).
+    assert host.startswith("127.0.0.1") or host.startswith("[::1]"), host
+    assert "localhost" not in pinned  # hostname no longer used for connect
+    assert pinned.endswith("/api/tags")
+    assert host_header == "localhost:11434"
+
+
+def test_guard_and_pin_blocks_metadata():
+    with pytest.raises(SsrfBlocked):
+        guard_and_pin("http://169.254.169.254/api/tags", allow_private=True)
 
 
 # ---------------------------------------------------------------------------

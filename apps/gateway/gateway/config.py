@@ -66,6 +66,13 @@ class Settings(BaseSettings):
     # (Gap 3, Phase 2). ⛔ Halt-point: replace before production.
     governance_tenant_id: str = "default"
 
+    # SSRF guard for the user-supplied Ollama base URL. Comma-separated hostname
+    # allowlist; when set, only these hosts may be targeted. Loopback/private
+    # addresses are permitted outside production (self-host local Ollama) and in
+    # production only when this allowlist names them. Link-local/metadata
+    # (169.254.x) is ALWAYS blocked. See gateway/ssrf.py.
+    ollama_url_allowlist: str = ""
+
     class Config:
         env_file = ".env"
         extra = "allow"

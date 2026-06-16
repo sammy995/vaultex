@@ -32,6 +32,7 @@ from gateway.models import (
 from gateway.rbac import PRIVILEGED_ROLES, get_role_permissions
 from gateway.redis_store import SessionStore
 from gateway.revocation import is_revoked
+from gateway.ssrf import SsrfBlocked, validate_ollama_url
 from gateway.tokenizer import run_tokenize
 from gateway.users import authenticate_user, create_user, get_user_by_email, get_user_by_username
 
@@ -112,6 +113,24 @@ def _correlation_id(request: Request) -> str:
     return request.headers.get("X-Request-ID") or str(uuid.uuid4())
 
 
+def _guard_ollama_url(url: str) -> str:
+    """Validate a caller-supplied Ollama URL against the SSRF policy.
+
+    Loopback/private targets are allowed for self-host (non-production) or when
+    explicitly allowlisted; link-local/metadata is always blocked. Raises
+    HTTP 400 with a generic message on rejection — the reason is logged, never
+    echoed to the caller (no internal-topology disclosure).
+    """
+    allowlist = [h.strip() for h in settings.ollama_url_allowlist.split(",") if h.strip()]
+    in_production = settings.environment.strip().lower() in ("production", "prod")
+    allow_private = (not in_production) or bool(allowlist)
+    try:
+        return validate_ollama_url(url, allow_private=allow_private, allowlist=allowlist)
+    except SsrfBlocked as exc:
+        log.warning("ollama_url_blocked", reason=str(exc))
+        raise HTTPException(400, "The provided ollama_url is not permitted.")
+
+
 async def _require_auth(
     authorization: Optional[str] = Header(None),
 ) -> dict:
@@ -171,13 +190,18 @@ async def configure_session(
     session_id = str(uuid.uuid4())
     owner_sub = auth.get("sub", "")
     owner_tenant = auth.get("tenant", "default")
+    ollama_url = body.ollama_url or "http://localhost:11434"
+    # Validate at config time so the SSRF policy is enforced once, before the URL
+    # is persisted and later dereferenced by the chat path (route_to_llm).
+    if body.provider == "ollama":
+        ollama_url = _guard_ollama_url(ollama_url)
     await store.set_provider_config(
         session_id,
         {
             "provider": body.provider,
             "model": body.model,
             "api_key": body.api_key or "",
-            "ollama_url": body.ollama_url or "http://localhost:11434",
+            "ollama_url": ollama_url,
         },
     )
     # DB3: bind the session to its creator so no other identity can drive it.
@@ -208,11 +232,17 @@ async def get_models(
     # radius to known users; self-hosters still reach their own LAN Ollama.
     if provider != "ollama":
         raise HTTPException(400, "Model listing is only supported for the ollama provider.")
+    safe_url = _guard_ollama_url(ollama_url or "http://localhost:11434")
     try:
-        models = await list_ollama_models(ollama_url)
+        models = await list_ollama_models(safe_url)
         return {"models": models}
+    except HTTPException:
+        raise
     except Exception as exc:
-        raise HTTPException(503, f"Cannot reach Ollama at {ollama_url}: {exc}")
+        # Generic message — do not echo the URL or upstream exception (would leak
+        # internal reachability / topology). Detail is logged server-side only.
+        log.warning("ollama_unreachable", error=str(exc))
+        raise HTTPException(503, "Cannot reach Ollama.")
 
 
 @app.post("/api/auth/token", response_model=TokenResponse)

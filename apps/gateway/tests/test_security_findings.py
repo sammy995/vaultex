@@ -17,6 +17,7 @@ import uuid
 import pytest
 
 from gateway.audit import AuditLogger, EventType
+from gateway.ssrf import SsrfBlocked, validate_ollama_url
 from tests.conftest import FakeAsyncRedis
 
 
@@ -68,6 +69,42 @@ def test_models_endpoint_requires_auth(client):
         params={"provider": "ollama", "ollama_url": "http://169.254.169.254/"},
     )
     assert resp.status_code == 401, resp.text
+
+
+# ---------------------------------------------------------------------------
+# 2b. SSRF URL guard (authenticated callers still cannot hit metadata/internal)
+# ---------------------------------------------------------------------------
+
+def test_ssrf_guard_always_blocks_cloud_metadata():
+    # 169.254.169.254 is link-local — blocked even when private is allowed.
+    with pytest.raises(SsrfBlocked):
+        validate_ollama_url("http://169.254.169.254/", allow_private=True)
+
+
+def test_ssrf_guard_blocks_non_http_scheme():
+    with pytest.raises(SsrfBlocked):
+        validate_ollama_url("file:///etc/passwd", allow_private=True)
+    with pytest.raises(SsrfBlocked):
+        validate_ollama_url("gopher://x/", allow_private=True)
+
+
+def test_ssrf_guard_allows_localhost_for_selfhost():
+    # Loopback is the primary self-host case and must work when private allowed.
+    assert validate_ollama_url("http://localhost:11434", allow_private=True)
+
+
+def test_ssrf_guard_blocks_loopback_in_production_without_allowlist():
+    with pytest.raises(SsrfBlocked):
+        validate_ollama_url("http://localhost:11434", allow_private=False)
+
+
+def test_ssrf_guard_enforces_allowlist():
+    with pytest.raises(SsrfBlocked):
+        validate_ollama_url(
+            "http://evil.example.com:11434",
+            allow_private=True,
+            allowlist=["ollama.internal"],
+        )
 
 
 # ---------------------------------------------------------------------------

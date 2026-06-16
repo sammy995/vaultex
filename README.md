@@ -2,122 +2,107 @@
 
 # Vaultex
 
-### Open-source AI Trust Infrastructure for regulated enterprises
+### Open-source AI Trust Infrastructure for regulated teams
 
-**Stop AI agents from becoming financial, operational, and compliance liabilities.**
+**Use any LLM on sensitive data without the model ever seeing real PII — and prove it.**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![CI](https://github.com/sammy995/vaultex/actions/workflows/ci.yml/badge.svg)](https://github.com/sammy995/vaultex/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-[Quickstart](#-quickstart) · [Architecture](#-architecture) · [Packages](#-whats-in-this-repo) · [Open-core](#-open-core) · [Docs](./docs)
+[Quickstart](#-quickstart) · [Architecture](#-architecture) · [Monorepo layout](#-monorepo-layout) · [Open-core](#-open-core)
 
 </div>
 
 ---
 
-Vaultex is the **trust layer between your enterprise and the LLMs it uses**. It keeps regulated
-data out of model prompts, watches agent behaviour at runtime, and produces the audit evidence a
-bank's risk committee actually asks for.
+Vaultex is the **trust layer between your team and the LLMs it uses**. It has two planes:
 
-This repository is the **open-source wedge** — the SDKs, the wire contracts, the integration
-adapters, and the runtime-safety/classification *interfaces* you build on. The proprietary
-risk intelligence (BFSI taxonomy, model-risk scoring, tuned detectors, the governance engine
-internals) plugs in behind these interfaces. See [Open-core](#-open-core).
+- **Data plane** — a proxy that detects and **reversibly tokenizes** every personal identifier
+  before a prompt leaves your network, then restores it (role-aware) on the response. The model
+  sees `{{PERSON_1}}`, never `Jane Smith`.
+- **Trust plane** — a **hash-chained, tamper-evident audit log** with role-based detokenization and
+  exportable evidence, so you can show *what was sent, by whom, and that the record wasn't altered.*
 
-## The three planes
-
-| Plane | What it does | Where |
-|---|---|---|
-| **Vaultex** — input governance | Tokenizes PII/MNPI before any prompt reaches an LLM; role-aware detokenization | `packages/classifier`, `sdk/python` |
-| **AgentGuard** — runtime + FIN-SAFE | Monitors calls/cost/verdicts; detects prompt injection, PII leakage, jailbreaks | `packages/finsafe-core`, `sdk/typescript` |
-| **Governance Service** — shared trust fabric | Policy versioning, immutable audit chain, approvals, evidence packs | `contracts/` |
+Runs fully self-hosted. Bring a **local LLM (Ollama)** or **your own API key** — Vaultex never sees
+your data or your keys, and there is nothing to pay.
 
 ## 🚀 Quickstart
 
-> **Release status:** pre-1.0. Packages are **not yet on npm / PyPI** — install from
-> source (below). Registry publishing is tracked in the issues.
-
 ```bash
-# 1. Classify + tokenize sensitive data before it leaves your network (Python)
-# From source (until PyPI publish):
 git clone https://github.com/sammy995/vaultex && cd vaultex
-pip install -e packages/classifier
+
+# 1. Start the gateway + Redis (the data + trust planes)
+docker compose up --build        # gateway on http://localhost:8000
+
+# 2. Run the web console / site
+cd apps/web && npm install && npm run dev   # http://localhost:3000
 ```
+
+Point the console at the gateway, pick a provider (Ollama / OpenAI / Anthropic), and chat over
+sensitive data — PII is tokenized on the way out and restored per your role on the way back.
+
+Library-only? Install the open-core packages and build on the interfaces directly:
+
 ```python
-from vaultex import Classifier, RegexNerPipeline
-
-clf = Classifier(pipeline=RegexNerPipeline())          # reference, open-source pipeline
-result = clf.classify("Wire $42,500 to Jane Smith, SSN 123-45-6789")
-print(result.sensitivity)        # -> "restricted"
-print(result.entities)           # -> [PERSON, SSN, MONEY...]
+from vaultex import Classifier, RegexNerPipeline      # packages/classifier
+clf = Classifier(pipeline=RegexNerPipeline())
+clf.classify("Wire $42,500 to Jane Smith, SSN 123-45-6789").sensitivity   # -> "restricted"
 ```
 
-```bash
-# 2. Screen model I/O for runtime attacks (TypeScript)
-# From source (until npm publish): npm install && npm run build, then import
-# from the @vaultex/finsafe-core workspace package.
-npm install && npm run build
-```
 ```ts
-import { DetectorRegistry, referenceDetectors } from '@vaultex/finsafe-core';
-
-const registry = new DetectorRegistry(referenceDetectors());
-const findings = await registry.scan({ phase: 'input', text: userPrompt });
-if (findings.some(f => f.severity === 'high')) block();
-```
-
-See [`examples/`](./examples) for runnable end-to-end demos.
-
-## 📦 What's in this repo
-
-```
-contracts/          OpenAPI + JSON-Schema for the Governance Service (the wire contract)
-packages/
-  integrations/     OpenTelemetry · Prometheus · Datadog · SIEM (syslog/HEC) · OIDC adapters  (TS)
-  finsafe-core/     Detector interface + reference injection/PII-leak/jailbreak heuristics      (TS)
-  classifier/       Python pkg `vaultex`: Classifier interface + regex/NER pipeline + gov client
-sdk/
-  typescript/       Thin AgentGuard client (@vaultex/sdk)
-examples/           Quickstarts
-docs/               Architecture, concepts, and how the proprietary core plugs in
+import { DetectorRegistry, referenceDetectors } from '@vaultex/finsafe-core'; // packages/finsafe-core
+const findings = await new DetectorRegistry(referenceDetectors()).scan({ phase: 'input', text });
 ```
 
 ## 🏗 Architecture
 
 ```
-   data INTO models ─▶  Vaultex (classify + tokenize)  ─┐
-                                                        │ audit + evidence
-                                              ┌─────────▼─────────┐
-                                              │ Governance Service │  (contracts/)
-                                              │ versions · audit   │
-                                              │ approvals · evidence│
-                                              └─────────▲─────────┘
-                                                        │ verdicts + findings
- behaviour OUT of models ─▶ AgentGuard + FIN-SAFE ──────┘
+  data INTO models ─▶  apps/gateway: classify + reversibly tokenize PII  ─┐
+                                                                          │ hash-chained
+                                                                ┌─────────▼─────────┐
+                                                                │  tamper-evident   │
+                                                                │  audit + evidence │
+                                                                └─────────▲─────────┘
+                                                                          │ role-aware detokenize
+  response OUT of model ─▶  apps/gateway returns to apps/web console ──────┘
 ```
 
-Full write-up in [`docs/architecture.md`](./docs/architecture.md).
+The proxy is **fail-safe**: if PII detection errors, the request is blocked, never sent in the clear.
+The audit chain is **tamper-evident**: any edit, reorder, or truncation of the log is detectable via
+`verify_chain()`. See [docs/architecture.md](./docs/architecture.md).
+
+## 📦 Monorepo layout
+
+```
+apps/
+  gateway/      FastAPI PII-tokenizing LLM proxy (Presidio + spaCy) + hash-chained audit   (Python)
+  web/          Next.js console + site — deploys to Vercel (vaultex.space)                  (TypeScript)
+packages/
+  finsafe-core/ Detector interface + reference injection / PII-leak / jailbreak heuristics  (TS)
+  integrations/ OpenTelemetry · Prometheus · Datadog · SIEM (syslog/HEC) · OIDC adapters    (TS)
+  classifier/   Python pkg `vaultex`: Classifier interface + regex/NER pipeline + gov client
+sdk/typescript/ Thin AgentGuard client (@vaultex/sdk)
+contracts/      OpenAPI + JSON-Schema for the Governance Service (the wire contract)
+docs/  examples/
+docker-compose.yml   redis + gateway (one command)
+```
+
+- **TS workspaces** (`packages/*`, `sdk/*`): `npm ci && npm run build && npm test` from the root.
+- **Gateway** (`apps/gateway`): `pip install -r requirements.txt && pytest`.
+- **Web** (`apps/web`): standalone Next.js app; `npm install && npm run build`. Deploys on Vercel
+  with the **project root set to `apps/web`**.
 
 ## 🔓 Open-core
 
-Vaultex is **open-core**. This repo (Apache-2.0) is everything you need to integrate and extend.
-The proprietary layer — what makes the risk decisions *good* — is delivered separately and plugs in
-behind the interfaces shipped here:
-
-| Open (this repo) | Proprietary (Vaultex Cloud / Enterprise) |
-|---|---|
-| `Detector` / `Classifier` interfaces + reference heuristics | Tuned detectors, model-risk scoring & tiers |
-| Integration adapters, SDKs, contracts | BFSI risk taxonomy, semantic sensitivity model |
-| Reference governance client | Governance-engine internals, managed evidence/attestations |
-
-You can run the open reference implementations standalone forever. Bring the proprietary providers
-when you need bank-grade accuracy and managed compliance evidence.
+Vaultex is **open-core** (Apache-2.0). This repo is everything you need to run, integrate, and extend
+the data + trust planes with the reference detectors/classifier. The proprietary layer — tuned
+detectors, the BFSI risk taxonomy, model-risk scoring, and managed compliance evidence — plugs in
+behind the same interfaces. You can run the open reference implementations standalone forever.
 
 ## 🤝 Contributing
 
-We love contributions — see [CONTRIBUTING.md](./CONTRIBUTING.md). Security issues:
-[SECURITY.md](./SECURITY.md).
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Security issues: [SECURITY.md](./SECURITY.md).
 
 ## 📄 License
 

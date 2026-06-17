@@ -1,0 +1,41 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build:
+      context: ./apps/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production-secret-key}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,https://clawwarden.space}
+      - DB_PATH=/data/users.db
+      # Credential-free NON-privileged tokens for the local/self-host demo
+      # (vp_risk/admin are still refused). Secure-by-default: OFF unless enabled.
+      - ALLOW_INSECURE_TOKEN_ENDPOINT=${ALLOW_INSECURE_TOKEN_ENDPOINT:-false}
+    volumes:
+      - gateway_data:/data
+    # Allows the gateway container to reach Ollama running on the host machine.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The web console/site (apps/web) deploys to Vercel and runs locally with
+  # `cd apps/web && npm install && npm run dev` (talks to the gateway above on
+  # http://localhost:8000). It is intentionally not containerised here.
+
+volumes:
+  gateway_data:

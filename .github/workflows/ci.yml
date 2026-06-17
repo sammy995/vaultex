@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typescript:
+    name: TypeScript packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+  python:
+    name: Python packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: classifier
+        working-directory: packages/classifier
+        run: |
+          pip install -e ".[dev]"
+          pytest -q
+
+  gateway:
+    name: Gateway (apps/gateway)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - working-directory: apps/gateway
+        run: pip install -r requirements.txt pytest
+      # The NER suite (test_tokenizer, test_pii_recall) needs the ~800MB
+      # en_core_web_lg spaCy model; run it in a dedicated/nightly job, not here.
+      - working-directory: apps/gateway
+        run: pytest -q --ignore=tests/test_tokenizer.py --ignore=tests/test_pii_recall.py
+
+  web:
+    name: Web (apps/web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - working-directory: apps/web
+        run: npm ci
+      - working-directory: apps/web
+        run: npm run build
+
+  security:
+    name: Secret + dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the secret scan
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Dependency audits surface advisories but don't block the build yet
+      # (a transitive high with no fix shouldn't wedge merges). Triage findings,
+      # then drop continue-on-error to make highs blocking.
+      - name: npm audit (web, high+)
+        working-directory: apps/web
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit (gateway)
+        working-directory: apps/gateway
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt

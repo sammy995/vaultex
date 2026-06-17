@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const PRINCIPLES = [
   ["Trust is data, not a slide", "Every block, override, and disclosure is recorded as evidence — with the policy version and reason attached. Governance you can show an auditor, not just describe."],
-  ["Open at the edges, earned at the core", "The interfaces, reference detectors, and SDKs are open source. The tuned detection, risk taxonomy, and managed compliance are what we sell. Adoption and moat, separated cleanly."],
+  ["Fully open, no asterisks", "Every line is Apache-2.0 and inspectable — no paid core, no locked features, no telemetry. Trust infrastructure earns adoption by being verifiable, not by being sold."],
   ["Analytics must survive privacy", "Tokenizing a name shouldn't destroy a portfolio query. We redact identifiers and keep the numbers — so models stay useful and data stays safe."],
   ["Fail toward safety", "Input governance fails closed. Gate-mode enforcement fails closed. The defaults protect the institution, not the demo."],
 ];
@@ -48,9 +48,9 @@ export default function AboutPage() {
           </p>
 
           <p style={{ marginTop: "20px", fontSize: "1.02rem", lineHeight: 1.8, color: "var(--ink-soft)" }}>
-            We build it open source because trust infrastructure earns adoption by being inspectable.
-            The interfaces and reference implementations are Apache-2.0 and run standalone forever;
-            the tuned detection, BFSI risk taxonomy, and managed compliance are the commercial core.
+            We build it fully open source because trust infrastructure earns adoption by being
+            inspectable. Every line is Apache-2.0 and runs standalone forever — no paid core, no
+            locked features, no telemetry. You self-host it, hold the keys, and own the data.
           </p>
 
           <hr className="rule" style={{ margin: "56px 0" }} />

@@ -42,10 +42,10 @@ We do not use tracking cookies or third-party analytics scripts that profile ind
 This information is used only to follow up about your enquiry, a pilot, or early access. We will not sell, share, or rent your contact information to third parties. You may request deletion at any time by emailing hello@clawwarden.space.`,
   },
   {
-    title: "5. Hosted / SaaS Tiers",
-    body: `If you use a managed or hosted ClawWarden tier (Professional or Enterprise), a separate Data Processing Agreement (DPA) governs the handling of any data processed through your deployment. Please contact hello@clawwarden.space to request a DPA.
+    title: "5. Self-hosted — we process nothing",
+    body: `ClawWarden is self-hosted, fully open-source software (Apache-2.0). You run it inside your own infrastructure. There is no hosted or managed tier, and no telemetry.
 
-In hosted tiers, we process tokenized prompts on your behalf as a data processor. Raw PII never travels to our servers — it is tokenized before leaving your network boundary.`,
+The project and its maintainers operate no servers that touch your data and have no access to your prompts, PII, tokens, or keys. In your deployment you are the data controller (and processor) for everything ClawWarden handles — which is exactly why raw PII never leaves your network.`,
   },
   {
     title: "6. Data Retention",

@@ -61,16 +61,8 @@ const jsonLd = {
     "Open source AI trust infrastructure for regulated enterprises: input governance (PII tokenization), runtime safety (prompt injection, PII leakage, jailbreak detection), and a governance engine with policy versioning, immutable audit, and evidence packs.",
   url: APP_URL,
   publisher: { "@type": "Organization", name: "ClawWarden", url: APP_URL },
-  offers: [
-    { "@type": "Offer", name: "Open Source", price: "0", priceCurrency: "USD" },
-    {
-      "@type": "Offer",
-      name: "Professional",
-      price: "299",
-      priceCurrency: "USD",
-      priceSpecification: { "@type": "UnitPriceSpecification", billingDuration: "P1M" },
-    },
-  ],
+  offers: { "@type": "Offer", name: "Open Source (Apache-2.0)", price: "0", priceCurrency: "USD" },
+  license: "https://www.apache.org/licenses/LICENSE-2.0",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -7,6 +7,7 @@ LLM06 (Sensitive Info Disclosure)— gateway/log_scrubber.py + structlog process
 
 from gateway.injection_guard import scan_for_injection
 from gateway.log_scrubber import scrub, scrub_processor
+from gateway.observability import _scrub_event
 from gateway.output_guard import sanitize_output
 from gateway.auth import issue_token
 
@@ -31,6 +32,27 @@ def test_scrub_redacts_secret_assignment():
 def test_scrub_redacts_high_entropy_token():
     out = scrub("nonce 9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c here")
     assert "[REDACTED:HIGH_ENTROPY]" in out
+
+
+def test_sentry_event_scrubber_drops_pii_subtrees_and_redacts_text():
+    event = {
+        "event_id": "deadbeefdeadbeefdeadbeefdeadbeef",  # high-entropy metadata
+        "logentry": {"message": "provider key sk-ant-abc123def456ghi789jkl rejected"},
+        "exception": {"values": [{"value": "lookup failed for SSN 123-45-6789"}]},
+        "request": {"data": "raw body with PII"},
+        "extra": {"prompt": "Wire to Jane Smith"},
+        "user": {"id": "u1", "email": "jane@acme.com"},
+        "contexts": {"user": {"email": "jane@acme.com"}},
+    }
+    out = _scrub_event(event, None)
+    # Whole PII-bearing subtrees dropped.
+    assert "request" not in out and "extra" not in out and "user" not in out
+    assert "user" not in out["contexts"]
+    # Free-text fields redacted.
+    assert "sk-ant-" not in out["logentry"]["message"]
+    assert "123-45-6789" not in out["exception"]["values"][0]["value"]
+    # Sentry metadata preserved (not entropy-mangled).
+    assert out["event_id"] == "deadbeefdeadbeefdeadbeefdeadbeef"
 
 
 def test_scrub_leaves_plain_prose_untouched():

@@ -18,16 +18,30 @@ from gateway.log_scrubber import scrub
 
 try:
     import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
 except ImportError:  # pragma: no cover - optional dependency
     sentry_sdk = None
+    LoggingIntegration = None
 
 
 def _scrub_event(event, _hint):
-    # Scrub the rendered message.
+    """Last-line scrubber. Collection is already minimized at init (no frame
+    locals / breadcrumbs / request), so the only free-text fields that can carry
+    PII are the message and exception values — scrub those, and defensively drop
+    request/extra/contexts.user in case a future integration repopulates them.
+
+    We do NOT recursively scrub the whole event: Sentry's own metadata (event_id,
+    trace ids, content hashes) is high-entropy and would be mangled by the
+    entropy redactor, breaking ingestion."""
+    event.pop("request", None)
+    event.pop("extra", None)
+    if isinstance(event.get("contexts"), dict):
+        event["contexts"].pop("user", None)
+    event.pop("user", None)
+
     msg = event.get("logentry", {}).get("message")
     if isinstance(msg, str):
         event["logentry"]["message"] = scrub(msg)
-    # Scrub exception values.
     for exc in event.get("exception", {}).get("values", []) or []:
         if isinstance(exc.get("value"), str):
             exc["value"] = scrub(exc["value"])
@@ -42,7 +56,13 @@ def init_sentry() -> bool:
         dsn=settings.sentry_dsn,
         environment=settings.environment,
         traces_sample_rate=settings.sentry_traces_sample_rate,
-        send_default_pii=False,  # never send PII from a PII gateway
+        # PII minimization for a PII gateway — keep the dangerous data out of the
+        # event entirely, not just scrub it after the fact:
+        send_default_pii=False,            # no request body/headers/cookies/user
+        include_local_variables=False,     # no stack-frame locals (hold prompt text/PII)
+        max_breadcrumbs=0,                  # no breadcrumb trail
+        # Don't auto-capture log records as breadcrumbs or events.
+        integrations=[LoggingIntegration(level=None, event_level=None)] if LoggingIntegration else [],
         before_send=_scrub_event,
     )
     return True

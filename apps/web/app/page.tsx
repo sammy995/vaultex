@@ -685,15 +685,15 @@ const findings = await registry.scan({
               </span>
             </h2>
             <p className="lede" style={{ marginTop: "20px", maxWidth: "46ch", marginInline: "auto" }}>
-              Run the open reference in minutes — or talk to us about bank-grade detection and managed
-              compliance evidence.
+              Fully open source, self-hosted, your keys and your data. Run it in minutes —
+              or try the live tokenizer in your browser, no install.
             </p>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "34px", flexWrap: "wrap" }}>
               <Link href="/tokenize" className="btn btn-ink" style={{ padding: "14px 28px", fontSize: "1rem" }}>
-                Try the demo <ArrowRight size={17} />
+                Try it live <ArrowRight size={17} />
               </Link>
-              <a href="mailto:hello@clawwarden.space?subject=ClawWarden%20Demo" className="btn btn-line" style={{ padding: "14px 26px", fontSize: "1rem" }}>
-                Book a demo
+              <a href="https://github.com/clawwarden/clawwarden" target="_blank" rel="noopener noreferrer" className="btn btn-line" style={{ padding: "14px 26px", fontSize: "1rem" }}>
+                View on GitHub
               </a>
             </div>
           </Reveal>

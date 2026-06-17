@@ -480,24 +480,8 @@ export default function SetupPage() {
                     <div style={{ fontSize: "0.83rem", color: "var(--text-secondary)" }}>
                       {p.description}
                     </div>
-                    {p.proOnly && (
-                      <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Lock size={12} style={{ color: "#6f5519", flexShrink: 0 }} />
-                        <span style={{ fontSize: "0.74rem", color: "#6f5519" }}>Requires Pro plan — </span>
-                        <a
-                          href="mailto:hello@clawwarden.space?subject=ClawWarden%20Professional%20Plan%20%E2%80%94%20Demo%20Request"
-                          onClick={e => e.stopPropagation()}
-                          style={{ fontSize: "0.74rem", color: "#0d5a40", fontWeight: 700, textDecoration: "none" }}
-                        >
-                          Book a Demo
-                        </a>
-                      </div>
-                    )}
                   </div>
-                  {p.proOnly
-                    ? <Lock size={18} style={{ color: "rgba(138,106,34,0.5)", flexShrink: 0 }} />
-                    : <CheckCircle size={18} style={{ color: provider === p.id ? "var(--color-primary)" : "transparent", flexShrink: 0, transition: "color var(--transition-base)" }} />
-                  }
+                  <CheckCircle size={18} style={{ color: provider === p.id ? "var(--color-primary)" : "transparent", flexShrink: 0, transition: "color var(--transition-base)" }} />
                 </div>
               ))}
             </div>

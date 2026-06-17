@@ -6,7 +6,7 @@ import { ArrowRight, Mail, Star, ShieldCheck } from "lucide-react";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
 
-const INTERESTS = ["Book a demo", "Enterprise / on-prem", "Security review", "Open-source / self-host", "Other"];
+const INTERESTS = ["Deployment help", "On-prem self-host", "Security review", "Open-source / self-host", "Other"];
 
 export default function ContactPage() {
   const [email, setEmail] = useState("");

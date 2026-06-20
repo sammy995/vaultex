@@ -54,12 +54,6 @@ Classifier(pipeline=RegexNerPipeline()).classify(
 ).sensitivity            # -> "restricted"
 ```
 
-```ts
-// npm i clawwarden-finsafe-core
-import { DetectorRegistry, referenceDetectors } from 'clawwarden-finsafe-core';
-const findings = await new DetectorRegistry(referenceDetectors()).scan({ phase: 'input', text });
-```
-
 ## How it works
 
 ```
